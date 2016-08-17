@@ -256,105 +256,160 @@ $mailboxes = @($mbdbs | Get-Mailbox -IgnoreDefaultScope -ResultSize Unlimited)
 
 
 #Check each database for most recent backup timestamp
-foreach ($db in $dbs)
-{
-	$tmpstring = "---- Checking $($db.name) ----"
+foreach ($db in $dbs) {
+	
+    $tmpstring = "---- Checking $($db.name) ----"
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
 
-	$lastbackup = @{}
-	[int]$ago = $null
-
-	if ( $db.LastFullBackup -eq $null -and $db.LastIncrementalBackup -eq $null)
-	{
+    if ($db.Mounted -eq $false) {
+        $tmpString = "$($db.name) is dismounted"
+        Write-Verbose $tmpString
+        if ($Log) {Write-Logfile $tmpstring}
+    }
+    elseif ($db.Mounted -eq $null) {
+        #Indicates Information Store service was stopped on the server
+        $tmpString = "$($db.Name) could not be reached"
+        Write-Verbose $tmpString
+        if ($Log) {Write-Logfile $tmpstring}
+    }
+    elseif ( -not $db.LastFullBackup -and -not $db.LastIncrementalBackup -and -not $db.LastDifferentialBackup) {
 		#No backup timestamp was present. This means either the database has
 		#never been backed up, or it was unreachable when this script ran
-		$lastbackup.time = "Never/Unknown"
-		$lastbackup.type = "Never/Unknown"
-		[string]$ago = "Never/Unknown"
-	}
-	elseif ( $db.LastFullBackup -lt $db.LastIncrementalBackup )
-	{
-		#Most recent backup was Incremental
-		$lastbackup.time = $db.LastIncrementalBackup
-		$lastbackup.type = "Incremental"
-		[int]$ago = ($now - $lastbackup.time).TotalHours
-		[int]$ago = "{0:00}" -f $ago
-	}
-	elseif ( $db.LastIncrementalBackup -lt $db.LastFullBackup )
-	{
-		#Most recent backup was Full
-		$lastbackup.time = $db.LastFullBackup
-		$lastbackup.type = "Full"
-		[int]$ago = ($now - $lastbackup.time).TotalHours
-		[int]$ago = "{0:00}" -f $ago
-	}
-
-	$tmpstring = "Last backup of $($db.name) was $($lastbackup.type) on $($lastbackup.time), $ago hours ago"
-    Write-Verbose $tmpstring
-    if ($Log) {Write-Logfile $tmpstring}
-
-	#Determines the database type (Mailbox or Public Folder)
-	if ($db.IsMailboxDatabase -eq $true) {$dbtype = "Mailbox"}
-	if ($db.IsPublicFolderDatabase -eq $true) {$dbtype = "Public Folder"}
-
-	#Report data is collected into a custom object
-	$dbObj = New-Object PSObject
-	if ( $dbtype -eq "Public Folder")
-	{
-		#Exchange 2007/2010 Public Folder databases are only associated with a server
-		$dbObj | Add-Member NoteProperty -Name "Server/DAG" -Value $db.Server
-		[string]$mbcount = "n/a"
+		$LastBackups = @{
+                            Never="n/a"
+                        }
 	}
 	else
 	{
-		#Exchange 2007/2010 Mailbox databases can be associated with a server or DAG
-		if ($db.MasterServerOrAvailabilityGroup)
-		{
-			$dbObj | Add-Member NoteProperty -Name "Server/DAG" -Value $db.MasterServerOrAvailabilityGroup
-		}
-		else
-		{
-			$dbObj | Add-Member NoteProperty -Name "Server/DAG" -Value $db.ServerName
-		}
+        if (-not $db.LastIncrementalBackup)
+        {
+            $LastInc = "Never"
+        }
+        else
+        {
+            $LastInc = "{0:00}" -f ($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours
+        }
+
+        if (-not $db.LastDifferentialBackup)
+        {
+            $LastDiff = "Never"
+        }
+        else
+        {
+            $LastDiff = "{0:00}" -f ($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours
+        }
+
+        if (-not $db.LastFullBackup)
+        {
+            $LastFull = "Never"
+        }
+        else
+        {
+            $LastFull = "{0:00}" -f ($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours
+        }
+
+        #Values in this hashtable are calculated as hours since last backup
+        $LastBackups = @{
+                Incremental=$LastInc
+                Differential=$LastDiff
+                Full=$LastFull
+                }
+    }
+
+        $LatestBackup = ($LastBackups.GetEnumerator() | Sort-Object -Property Value)[0]
+        if ($($LatestBackup.Value) -eq "n/a")
+        {
+            $tmpstring = "$($db.name) has never been backed up."
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+        }
+        else
+        {
+            $tmpstring = "Last backup of $($db.name) was $($LatestBackup.Key) $($LatestBackup.Value) hours ago"
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+        }
+ 
+ 	    #Determines the database type (Mailbox or Public Folder)
+	    if ($db.IsMailboxDatabase -eq $true) {$dbtype = "Mailbox"}
+	    if ($db.IsPublicFolderDatabase -eq $true) {$dbtype = "Public Folder"}
+
+        #Report data is collected into a custom object
+        $dbObj = New-Object PSObject
+	    if ( $dbtype -eq "Public Folder")
+	    {
+		    #Exchange 2007/2010 Public Folder databases are only associated with a server
+		    $dbObj | Add-Member NoteProperty -Name "Server/DAG" -Value $db.Server
+		    [string]$mbcount = "n/a"
+	    }
+	    else
+	    {
+		    #Exchange Mailbox databases can be associated with a server or DAG
+		    if ($db.MasterServerOrAvailabilityGroup)
+		    {
+			    $dbObj | Add-Member NoteProperty -Name "Server/DAG" -Value $db.MasterServerOrAvailabilityGroup
+		    }
+		    else
+		    {
+			    $dbObj | Add-Member NoteProperty -Name "Server/DAG" -Value $db.ServerName
+		    }
 		
-		#Mailbox count calculated for Mailbox Databases, including Exchange 2010 Archive mailboxes
-		[int]$mbcount = 0
-		[int]$mbcount = @($mailboxes | Where-Object {$_.Database -eq $($db.name)}).count
-        [int]$archivecount = 0
-        [int]$archivecount = @($mailboxes | Where-Object {$_.ArchiveDatabase -eq $($db.name)}).count
-        [int]$mbcount = $mbcount + $archivecount
-	}
+		    #Mailbox count calculated for Mailbox Databases, including Archive mailboxes
+		    [int]$mbcount = 0
+		    [int]$mbcount = @($mailboxes | Where-Object {$_.Database -eq $($db.name)}).count
+            [int]$archivecount = 0
+            [int]$archivecount = @($mailboxes | Where-Object {$_.ArchiveDatabase -eq $($db.name)}).count
+            [int]$mbcount = $mbcount + $archivecount
+	    }
 	
-	$dbObj | Add-Member NoteProperty -Name "Database" -Value $db.name
-	$dbObj | Add-Member NoteProperty -Name "Database Type" -Value $dbtype
-	
-	#Check last backup time against alert threshold and set report status accordingly
-	if ( $ago -gt $threshold -or $ago -eq "Never")
-	{
-		$dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
-		[bool]$alertflag = $true
-		$tmpstring = "Alert flag is $alertflag"
-        Write-Verbose $tmpstring
-        if ($Log) {Write-Logfile $tmpstring}
-	}
-	else
-	{
-		$dbObj | Add-Member NoteProperty -Name "Status" -Value "OK"
-	}
-	
-    #Determine Yes/No status for backup in progress
-    if ($($db.backupinprogress) -eq $true) {$inprogress = "Yes"}
-    if ($($db.backupinprogress) -eq $false) {$inprogress = "No"}
+	    $dbObj | Add-Member NoteProperty -Name "Database" -Value $db.name
+	    $dbObj | Add-Member NoteProperty -Name "Database Type" -Value $dbtype
 
-	$dbObj | Add-Member NoteProperty -Name "Mailboxes" -Value $mbcount
-	$dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value $lastbackup.type
-	$dbObj | Add-Member NoteProperty -Name "Hrs Ago" -Value $ago
-	$dbObj | Add-Member NoteProperty -Name "Time Stamp" -Value $lastbackup.time
-	$dbObj | Add-Member NoteProperty -Name "Currently Running" -Value $inprogress
+        #$($LatestBackup.Value)
 
-	#Add the custom object to the report
-	$report = $report += $dbObj
+	    #Check last backup time against alert threshold and set report status accordingly
+	    if ($($LatestBackup.Value) -eq "n/a")
+	    {
+		    $dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
+		    [bool]$alertflag = $true
+		    $tmpstring = "Alert flag is $alertflag"
+            Write-Verbose $tmpstring
+            if ($Log) {Write-Logfile $tmpstring}
+	    }
+	    elseif ($($LatestBackup.Value.ToInt32($null)) -gt $threshold)
+	    {
+		    $dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
+		    [bool]$alertflag = $true
+		    $tmpstring = "Alert flag is $alertflag"
+            Write-Verbose $tmpstring
+            if ($Log) {Write-Logfile $tmpstring}
+	    }
+	    else
+	    {
+		    $dbObj | Add-Member NoteProperty -Name "Status" -Value "OK"
+	    }
+
+        #Determine Yes/No status for backup in progress
+        if ($($db.backupinprogress) -eq $true) {$inprogress = "Yes"}
+        if ($($db.backupinprogress) -eq $false) {$inprogress = "No"}
+
+	    $dbObj | Add-Member NoteProperty -Name "Mailboxes" -Value $mbcount
+	    $dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value $($LatestBackup.Key)
+	    $dbObj | Add-Member NoteProperty -Name "Hours Ago" -Value $($LatestBackup.Value)
+	    
+        switch ($($LatestBackup.Key)) {
+            "Full" { $dbObj | Add-Member NoteProperty -Name "UTC Time Stamp" -Value $db.LastFullBackup.ToUniversalTime() }
+            "Incremental" { $dbObj | Add-Member NoteProperty -Name "UTC Time Stamp" -Value $db.LastIncrementalBackup.ToUniversalTime() }
+            "Differential" { $dbObj | Add-Member NoteProperty -Name "UTC Time Stamp" -Value $db.LastDifferentialBackup.ToUniversalTime() }
+            default { $dbObj | Add-Member NoteProperty -Name "UTC Time Stamp" -Value "Never" }
+        }
+
+	    $dbObj | Add-Member NoteProperty -Name "Backup Currently Running" -Value $inprogress
+
+	    #Add the custom object to the report
+	    $report = $report += $dbObj
+
 }
 #All databases have now been checked
 

@@ -1,0 +1,17 @@
+﻿<?xml version="1.0"?>
+<Settings>
+  <EmailSettings>
+    <SMTPServer>smtp.contoso.com</SMTPServer>
+    <SMTPPort>25</SMTPPort>
+    <MailFrom>exchangeserver@contoso.com</MailFrom>
+    <MailTo>exchangeadmins@contoso.com</MailTo>
+  </EmailSettings>
+  <Exclusions>
+    <DBName></DBName>
+    <DBName></DBName>
+  </Exclusions>
+  <OtherSettings>
+    <ThresholdMonday>48</ThresholdMonday>
+    <ThresholdOther>24</ThresholdOther>
+  </OtherSettings>
+</Settings>
