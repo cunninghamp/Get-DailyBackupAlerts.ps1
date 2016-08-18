@@ -8,7 +8,8 @@ and alerts if a database hasn't been backed up
 recently
 
 .INPUTS
-No inputs required, however you should modify the Settings.xml file to suit your environment.
+No inputs required, however you should modify the Settings.xml file to
+suit your environment.
 
 .OUTPUTS
 Sends an HTML email if databases are detected without
@@ -154,34 +155,30 @@ $tmpstring = "Threshold for this check is $threshold hours"
 Write-Verbose $tmpstring
 if ($Log) {Write-Logfile $tmpstring}
 
-#Add Exchange 2010 snapin if not already loaded in the PowerShell session
-if (!(Get-PSSnapin | where {$_.Name -eq "Microsoft.Exchange.Management.PowerShell.E2010"}))
-{
-	Write-Verbose $initstring1
+#Load Exchange management tools if not already loaded
+if (!(Test-Path function:Get-MailboxDatabase)) {
+	
+    Write-Verbose $initstring1
 	if ($Log) {Write-Logfile $initstring1}
-	try
-	{
-		Add-PSSnapin Microsoft.Exchange.Management.PowerShell.E2010 -ErrorAction STOP
+	
+    try {
+	. $env:ExchangeInstallPath\bin\RemoteExchange.ps1
+	Connect-ExchangeServer -auto -AllowClobber
 	}
-	catch
-	{
+	catch {
 		#Snapin was not loaded
 		Write-Verbose $initstring2
 		if ($Log) {Write-Logfile $initstring2}
-		Write-Warning $_.Exception.Message
-		EXIT
+		throw $_.Exception.Message
 	}
-	. $env:ExchangeInstallPath\bin\RemoteExchange.ps1
-	Connect-ExchangeServer -auto -AllowClobber
 }
-
 
 
 #...................................
 # Script
 #...................................
 
-#Get all Mailbox and Public Folder databases
+#Get all Mailbox and Public Folder databases in the organization
 $tmpstring = "Retrieving database list"
 Write-Verbose $tmpstring
 if ($Log) {Write-Logfile $tmpstring}
@@ -198,41 +195,48 @@ else {
     $dbs = @(Get-MailboxDatabase -Status | Where {$_.Recovery -ne $true})
 }
 
+#Set another variable with all mailbox database before removing excluded DBs from $dbs
 $mbdbs = $dbs
 
-if ($dbs)
-{
+if ($dbs) {
 	$tmpstring = "$($dbs.count) mailbox databases found"
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
 
 }
-else
-{
+else {
 	$tmpstring = "No mailbox databases found"
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
 }
+
+#Get public folder databases, accounting for pre-2010 scenario
+$CommandGetPFDB = @(Get-Command Get-PublicFolderDatabase)[0]
+if ($CommandGetPFDB.Parameters.ContainsKey("IncludePreExchange2010")) {
+    $pfdbs = @(Get-PublicFolderDatabase -Status -IncludePreExchange2010)
+}
+else {
+    $pfbs = @(Get-PublicFolderDatabase -Status)
+}
+
 
 $pfdbs = @(Get-PublicFolderDatabase -Status)
 $tmpstring = "$($pfdbs.count) public folder databases found"
 Write-Verbose $tmpstring
 if ($Log) {Write-Logfile $tmpstring}
 
-
-if ($pfdbs)
-{
+if ($pfdbs) {
 	$dbs += $pfdbs
 	$tmpstring = "$($dbs.count) total databases found"
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
 }
-else
-{
+else {
 	$tmpstring = "No mailbox databases found"
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
 }
+
 
 #If a list of excluded databases exists, remove them from $dbs
 if ($excludedbs)
