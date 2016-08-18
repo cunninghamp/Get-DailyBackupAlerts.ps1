@@ -239,30 +239,29 @@ else {
 
 
 #If a list of excluded databases exists, remove them from $dbs
-if ($excludedbs)
-{
+if ($excludedbs) {
 	$tmpstring = "Removing excluded databases from the checks"
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
-	$tempdbs = $dbs
+	
+    $tempdbs = $dbs
 	$dbs = @()
-	foreach ($tempdb in $tempdbs)
-	{
-		if (!($excludedbs -icontains $tempdb))
-		{
+	
+    foreach ($tempdb in $tempdbs) {
+		if (!($excludedbs -icontains $tempdb)) {
 			$tmpstring = "$tempdb included"
             Write-Verbose $tmpstring
             if ($Log) {Write-Logfile $tmpstring}
 			$dbs = $dbs += $tempdb
 		}
-		else
-		{
+		else {
 			$tmpstring = "$tempdb excluded"
             Write-Verbose $tmpstring
             if ($Log) {Write-Logfile $tmpstring}
 		}
 	}
 }
+
 
 #Get list of mailboxes only for databases that haven't been excluded
 $tmpstring = "Retrieving list of mailboxes for use in mailbox count later"
@@ -279,19 +278,25 @@ foreach ($db in $dbs) {
     if ($Log) {Write-Logfile $tmpstring}
 
     if ($db.Mounted -eq $false) {
+        #If databases are dismounted their status can't be retrieved
+        #so they can't be reported on correctly.
+        
         $tmpString = "$($db.name) is dismounted"
         Write-Verbose $tmpString
         if ($Log) {Write-Logfile $tmpstring}
     }
     elseif ($db.Mounted -eq $null) {
-        #Indicates Information Store service was stopped on the server
+        #Indicates Information Store service was stopped on the server.
+        #If IS service is stopped the database status can't be retrieved
+        #so they can't be reported on correctly.
+
         $tmpString = "$($db.Name) could not be reached"
         Write-Verbose $tmpString
         if ($Log) {Write-Logfile $tmpstring}
     }
     elseif ( -not $db.LastFullBackup -and -not $db.LastIncrementalBackup -and -not $db.LastDifferentialBackup) {
-		#No backup timestamp was present. This means either the database has
-		#never been backed up, or it was unreachable when this script ran
+		#No backup timestamps for any backup type is present. This means either the database has
+		#never been backed up, or it was unreachable when this script ran.
 
 		$LastBackups = @{
                             Incremental="n/a"
@@ -299,10 +304,12 @@ foreach ($db in $dbs) {
                             Full="n/a"
                         }
 	}
-	else
-	{
-        if (-not $db.LastIncrementalBackup)
-        {
+	else {
+        #Backup timestamp was successfully retrieved, so now we need to work out which is
+        #the most recent backup.
+
+        #Check incremental backup timestamp and calculate hours since last Inc backup
+        if (-not $db.LastIncrementalBackup) {
 
             $tmpString = "$($db.Name) has no incremental backup timestamp"
             Write-Verbose $tmpString
@@ -310,13 +317,12 @@ foreach ($db in $dbs) {
 
             $LastInc = "Never"
         }
-        else
-        {
+        else {
             $LastInc = "{0:00}" -f ($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours
         }
 
-        if (-not $db.LastDifferentialBackup)
-        {
+        #Check differential backup timestamp and calculate hours since last Diff backup
+        if (-not $db.LastDifferentialBackup) {
 
             $tmpString = "$($db.Name) has no differential backup timestamp"
             Write-Verbose $tmpString
@@ -324,13 +330,12 @@ foreach ($db in $dbs) {
 
             $LastDiff = "Never"
         }
-        else
-        {
+        else {
             $LastDiff = "{0:00}" -f ($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours
         }
 
-        if (-not $db.LastFullBackup)
-        {
+        #Check full backup timestamp and calculate hours since last Full backup
+        if (-not $db.LastFullBackup) {
 
             $tmpString = "$($db.Name) has no full backup timestamp"
             Write-Verbose $tmpString
@@ -338,8 +343,7 @@ foreach ($db in $dbs) {
 
             $LastFull = "Never"
         }
-        else
-        {
+        else {
             $LastFull = "{0:00}" -f ($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours
         }
 
@@ -351,19 +355,18 @@ foreach ($db in $dbs) {
                 }
     }
 
+    #From last backup information retrieve most recent backup
     $LatestBackup = ($LastBackups.GetEnumerator() | Sort-Object -Property Value)[0]
-    if ($($LatestBackup.Value) -eq "n/a")
-    {
+    if ($($LatestBackup.Value) -eq "n/a") {
             $tmpstring = "$($db.name) has never been backed up."
             Write-Verbose $tmpString
             if ($Log) {Write-Logfile $tmpstring}
-        }
-    else
-    {
+    }
+    else {
             $tmpstring = "Last backup of $($db.name) was $($LatestBackup.Key) $($LatestBackup.Value) hours ago"
             Write-Verbose $tmpString
             if ($Log) {Write-Logfile $tmpstring}
-        }
+    }
  
  	#Determines the database type (Mailbox or Public Folder)
 	if ($db.IsMailboxDatabase -eq $true) {$dbtype = "Mailbox"}
@@ -371,14 +374,12 @@ foreach ($db in $dbs) {
 
     #Report data is collected into a custom object
     $dbObj = New-Object PSObject
-	if ( $dbtype -eq "Public Folder")
-	{
+	if ( $dbtype -eq "Public Folder") {
 		    #Exchange 2007/2010 Public Folder databases are only associated with a server
 		    $dbObj | Add-Member NoteProperty -Name "Server/DAG" -Value $db.Server
 		    [string]$mbcount = "n/a"
 	    }
-	else
-	{
+	else {
 		    #Exchange Mailbox databases can be associated with a server or DAG
 		    if ($db.MasterServerOrAvailabilityGroup)
 		    {
@@ -401,26 +402,23 @@ foreach ($db in $dbs) {
 	$dbObj | Add-Member NoteProperty -Name "Database Type" -Value $dbtype
 
 	#Check last backup time against alert threshold and set report status accordingly
-	if ($($LatestBackup.Value) -eq "n/a")
-	{
-		    $dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
-		    [bool]$alertflag = $true
-		    $tmpstring = "Alert flag is $alertflag"
-            Write-Verbose $tmpstring
-            if ($Log) {Write-Logfile $tmpstring}
-	    }
-	elseif ($($LatestBackup.Value.ToInt32($null)) -gt $threshold)
-	{
-		    $dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
-		    [bool]$alertflag = $true
-		    $tmpstring = "Alert flag is $alertflag"
-            Write-Verbose $tmpstring
-            if ($Log) {Write-Logfile $tmpstring}
-	    }
-	else
-	{
-		    $dbObj | Add-Member NoteProperty -Name "Status" -Value "OK"
-	    }
+	if ($($LatestBackup.Value) -eq "n/a") {
+		$dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
+		[bool]$alertflag = $true
+		$tmpstring = "Alert flag is $alertflag"
+        Write-Verbose $tmpstring
+        if ($Log) {Write-Logfile $tmpstring}
+    }
+	elseif ($($LatestBackup.Value.ToInt32($null)) -gt $threshold) {
+		$dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
+		[bool]$alertflag = $true
+		$tmpstring = "Alert flag is $alertflag"
+        Write-Verbose $tmpstring
+        if ($Log) {Write-Logfile $tmpstring}
+    }
+	else {
+	    $dbObj | Add-Member NoteProperty -Name "Status" -Value "OK"
+    }
 
     #Determine Yes/No status for backup in progress
     if ($($db.backupinprogress) -eq $true) {$inprogress = "Yes"}
@@ -441,6 +439,7 @@ foreach ($db in $dbs) {
         }
     }
 
+    #Check whether a backup is currently running
 	$dbObj | Add-Member NoteProperty -Name "Backup Currently Running" -Value $inprogress
 
 	#Add the custom object to the report
@@ -457,8 +456,7 @@ $alertdbs = @($report | Where-Object {$_.Status -eq "Alert"})
 $okdbs = @($report | Where-Object {$_.Status -eq "OK"})
 
 #Send the email if there is at least one alert, or if -AlwaysSend is set
-if (($alertflag -and $alertdbs) -or ($alwayssend))
-{
+if (($alertflag -and $alertdbs) -or ($alwayssend)) {
 	$tmpstring = "Alert email will be sent"
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
@@ -481,28 +479,24 @@ if (($alertflag -and $alertdbs) -or ($alwayssend))
                 <body>"
 
 	#Summarise databases with Alert status
-	if ($alertdbs)
-	{
+	if ($alertdbs) {
 		$totalalerts = $alertdbs.count
 		$alertintro = "<p>The following databases have not been backed up in the last $threshold hours.</p>"
 		$alerthtml = $alertdbs | ConvertTo-Html -Fragment
 	}
-	else
-	{
+	else {
 		$totalalerts = 0
 	}
 
 	#Summarise databases with OK status
-	if ($okdbs)
-	{
+	if ($okdbs)	{
 		Switch ($totalalerts) {
 			0 { $okintro = "<p>The following databases have been backed up in the last $threshold hours.</p>" }
 			default { $okintro = "<p>The following databases have been backed up in the last $threshold hours.</p>" }
 		}
 		$okhtml = $okdbs | ConvertTo-Html -Fragment
 	}
-	else
-	{
+	else {
 		$okintro = "<p>There are no databases that have been backed up in the last $threshold hours.</p>"
 	}
 
@@ -511,10 +505,9 @@ if (($alertflag -and $alertdbs) -or ($alwayssend))
     if ($Log) {Write-Logfile $tmpstring}
 
 	#Set some additional content for the email report
-	$intro = "<p>This is the Exchange database backup status for the last $threshold hours.</p>"
+	$intro = "<p>This is the Exchange database backup status for $now (UTC: $now.ToUniversalTime())</p>"
 
-	Switch ($totalalerts)
-	{
+	Switch ($totalalerts) {
 		1 {
 			$messageSubject = "Daily Check - Exchange Database Backups ($totalalerts alert)"
 			$summary = "<p>There is <strong>$totalalerts</strong> database backup alert today.</p>"
@@ -539,12 +532,10 @@ if (($alertflag -and $alertdbs) -or ($alwayssend))
     Write-Verbose $tmpstring
     if ($Log) {Write-Logfile $tmpstring}
 
-    try
-    {
+    try {
         Send-MailMessage @smtpsettings -Subject $messageSubject -Body $htmlreport -BodyAsHtml -Encoding ([System.Text.Encoding]::UTF8) -ErrorAction STOP
     }
-    catch
-    {
+    catch {
         $tmpstring = $_.Exception.Message
         Write-Warning $tmpstring
         if ($Log) {Write-Logfile $tmpstring}
