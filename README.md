@@ -1,8 +1,8 @@
 # Get-DailyBackupAlerts.ps1
-Generate an email report of Exchange database backup times
+Generate an email report of Exchange database backup times. Download the latest version of the script from the [TechNet Script Gallery](https://gallery.technet.microsoft.com/office/Generate-a-report-and-fa3b0540) or the [releases](https://github.com/cunninghamp/Get-DailyBackupAlerts.ps1/releases) page.
 
 ##Description
-Checks the backup timestamps for Exchange databases and alerts if a database hasn't been backed up recently
+Checks the backup timestamps for Exchange databases and alerts if a database hasn't been backed up recently.
 
 ##Inputs
 No inputs required, however you should modify the Settings.xml file to suit your environment.
