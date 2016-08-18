@@ -31,9 +31,9 @@ Written By: Paul Cunningham
 Website:	http://exchangeserverpro.com
 Twitter:	http://twitter.com/exchservpro
 
-Additional Credits: Chris Brown
-Website:	http://www.flamingkeys.com
-Twitter:	http://twitter.com/chrisbrownie
+Additional Credits:
+- Chris Brown (http://www.flamingkeys.com, http://twitter.com/chrisbrownie)
+- @pascalrip on GitHub (https://github.com/pascalrip)
 
 Change Log
 V1.00, 10/11/2011 - Initial version
@@ -50,6 +50,10 @@ V1.05, 29/01/2014 - Changed SMTP method to PowerShell 2.0
 V1.06, 22/05/2014 - Minor bug fixes
                     - Separated customizations into Settings.xml file
                     - Adding logging option
+V1.07, 18/08/2016 - Added handling for differential backups
+                    - Added color-coded backup status
+                    - Hours since last backup now based on UTC
+                    - General code cleanup
 #>
 
 #requires -version 2
@@ -73,6 +77,7 @@ $alertdbs = @()
 $okdbs = @()
 [bool]$alertflag = $false
 $excludedbs = @()
+
 
 #Current time is used in alert calculations
 $now = [DateTime]::Now
