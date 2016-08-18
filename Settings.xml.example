@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0"?>
 <Settings>
   <EmailSettings>
-    <SMTPServer>smtp.exchangeserverpro.net</SMTPServer>
+    <SMTPServer>smtp.contoso.com</SMTPServer>
     <SMTPPort>25</SMTPPort>
-    <MailFrom>exchangeserver@exchangeserverpro.net</MailFrom>
-    <MailTo>administrator@exchangeserverpro.net</MailTo>
+    <MailFrom>exchangeserver@contoso.com</MailFrom>
+    <MailTo>exchangeadmins@contoso.com</MailTo>
   </EmailSettings>
   <Exclusions>
     <DBName></DBName>
