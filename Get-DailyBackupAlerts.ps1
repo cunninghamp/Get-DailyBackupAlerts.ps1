@@ -123,6 +123,13 @@ foreach ($dbname in $exclusions)
     $excludedbs += $dbname
 }
 
+#HTML replacements for color-coded alerts
+#from @pascalrip on GitHub
+$tdOK="<td>OK</td>"
+$tdOKgreen="<td class=""pass"">OK</td>"
+$tdALERT="<td>Alert</td>"
+$tdALERTred="<td class=""fail"">Alert</td>"
+
 
 #...................................
 # Functions
@@ -483,6 +490,7 @@ if (($alertflag -and $alertdbs) -or ($alwayssend)) {
 		$totalalerts = $alertdbs.count
 		$alertintro = "<p>The following databases have not been backed up in the last $threshold hours.</p>"
 		$alerthtml = $alertdbs | ConvertTo-Html -Fragment
+        $alerthtml = $alerthtml -replace $tdALERT, $tdALERTred
 	}
 	else {
 		$totalalerts = 0
@@ -495,6 +503,7 @@ if (($alertflag -and $alertdbs) -or ($alwayssend)) {
 			default { $okintro = "<p>The following databases have been backed up in the last $threshold hours.</p>" }
 		}
 		$okhtml = $okdbs | ConvertTo-Html -Fragment
+        $okhtml = $okhtml -replace $tdOK, $tdOKgreen
 	}
 	else {
 		$okintro = "<p>There are no databases that have been backed up in the last $threshold hours.</p>"
@@ -505,7 +514,7 @@ if (($alertflag -and $alertdbs) -or ($alwayssend)) {
     if ($Log) {Write-Logfile $tmpstring}
 
 	#Set some additional content for the email report
-	$intro = "<p>This is the Exchange database backup status for $now (UTC: $now.ToUniversalTime())</p>"
+	$intro = "<p>This is the Exchange database backup status for <strong>$now</strong> (UTC: $($now.ToUniversalTime()))</p>"
 
 	Switch ($totalalerts) {
 		1 {
