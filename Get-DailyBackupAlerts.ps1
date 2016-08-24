@@ -330,7 +330,7 @@ foreach ($db in $dbs) {
             $LastInc = "Never"
         }
         else {
-            $LastInc = "{0:00}" -f ($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours
+            $LastInc = (($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
         #Check differential backup timestamp and calculate hours since last Diff backup
@@ -343,7 +343,7 @@ foreach ($db in $dbs) {
             $LastDiff = "Never"
         }
         else {
-            $LastDiff = "{0:00}" -f ($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours
+            $LastDiff = (($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
         #Check full backup timestamp and calculate hours since last Full backup
@@ -356,7 +356,7 @@ foreach ($db in $dbs) {
             $LastFull = "Never"
         }
         else {
-            $LastFull = "{0:00}" -f ($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours
+            $LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
         #Values in this hashtable are calculated as hours since last backup
@@ -421,7 +421,7 @@ foreach ($db in $dbs) {
         Write-Verbose $tmpstring
         if ($Log) {Write-Logfile $tmpstring}
     }
-	elseif ($($LatestBackup.Value.ToInt32($null)) -gt $threshold) {
+	elseif ($($LatestBackup.Value) -gt $threshold) {
 		$dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
 		[bool]$alertflag = $true
 		$tmpstring = "Alert flag is $alertflag"
