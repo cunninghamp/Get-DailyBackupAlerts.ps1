@@ -437,7 +437,14 @@ foreach ($db in $dbs) {
     if ($($db.backupinprogress) -eq $false) {$inprogress = "No"}
 
 	$dbObj | Add-Member NoteProperty -Name "Mailboxes" -Value $mbcount
-	$dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value $($LatestBackup.Key)
+
+    if ($($LatestBackup.Value) -eq "n/a") {
+	    $dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value "n/a"
+    }
+    else {
+        $dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value $($LatestBackup.Key)
+    }
+
 	$dbObj | Add-Member NoteProperty -Name "Hours Ago" -Value $($LatestBackup.Value)
 	
     if ($($LatestBackup.Value -eq "n/a")) {
