@@ -54,6 +54,8 @@ V1.07, 18/08/2016 - Added handling for differential backups
                     - Added color-coded backup status
                     - Hours since last backup now based on UTC
                     - General code cleanup
+V1.08, 25/08/2016 - Fixed incorrect number formatting
+                    - Fixed bug with databases that haven't been backed up being reported as "Incremental"
 #>
 
 #requires -version 2
@@ -330,7 +332,7 @@ foreach ($db in $dbs) {
             $LastInc = "Never"
         }
         else {
-            $LastInc = "{0:00}" -f ($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours
+            $LastInc = (($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
         #Check differential backup timestamp and calculate hours since last Diff backup
@@ -343,7 +345,7 @@ foreach ($db in $dbs) {
             $LastDiff = "Never"
         }
         else {
-            $LastDiff = "{0:00}" -f ($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours
+            $LastDiff = (($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
         #Check full backup timestamp and calculate hours since last Full backup
@@ -356,7 +358,7 @@ foreach ($db in $dbs) {
             $LastFull = "Never"
         }
         else {
-            $LastFull = "{0:00}" -f ($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours
+            $LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
         #Values in this hashtable are calculated as hours since last backup
@@ -421,7 +423,7 @@ foreach ($db in $dbs) {
         Write-Verbose $tmpstring
         if ($Log) {Write-Logfile $tmpstring}
     }
-	elseif ($($LatestBackup.Value.ToInt32($null)) -gt $threshold) {
+	elseif ($($LatestBackup.Value) -gt $threshold) {
 		$dbObj | Add-Member NoteProperty -Name "Status" -Value "Alert"
 		[bool]$alertflag = $true
 		$tmpstring = "Alert flag is $alertflag"
@@ -437,7 +439,14 @@ foreach ($db in $dbs) {
     if ($($db.backupinprogress) -eq $false) {$inprogress = "No"}
 
 	$dbObj | Add-Member NoteProperty -Name "Mailboxes" -Value $mbcount
-	$dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value $($LatestBackup.Key)
+
+    if ($($LatestBackup.Value) -eq "n/a") {
+	    $dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value "n/a"
+    }
+    else {
+        $dbObj | Add-Member NoteProperty -Name "Last Backup Type" -Value $($LatestBackup.Key)
+    }
+
 	$dbObj | Add-Member NoteProperty -Name "Hours Ago" -Value $($LatestBackup.Value)
 	
     if ($($LatestBackup.Value -eq "n/a")) {
