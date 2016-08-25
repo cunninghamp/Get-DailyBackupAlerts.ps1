@@ -54,6 +54,8 @@ V1.07, 18/08/2016 - Added handling for differential backups
                     - Added color-coded backup status
                     - Hours since last backup now based on UTC
                     - General code cleanup
+V1.08, 25/08/2016 - Fixed incorrect number formatting
+                    - Fixed bug with databases that haven't been backed up being reported as "Incremental"
 #>
 
 #requires -version 2
