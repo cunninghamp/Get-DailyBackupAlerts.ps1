@@ -105,6 +105,9 @@ $smtpsettings = @{
     SmtpServer = $ConfigFile.Settings.EmailSettings.SMTPServer
     }
 
+if ($Log) {
+    $smtpsettings.Add("Attachments",$logfile)
+}
 
 # Modify these alert thresholds in Settings.xml
 # You can set a different alert threshold for Mondays
