@@ -332,6 +332,10 @@ foreach ($db in $dbs) {
             $LastInc = "Never"
         }
         else {
+            $tmpString = "$($db.Name) last incremental was $($db.LastIncrementalBackup) (UTC: $($db.LastIncrementalBackup.ToUniversalTime()))"
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+
             $LastInc = (($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
@@ -345,6 +349,10 @@ foreach ($db in $dbs) {
             $LastDiff = "Never"
         }
         else {
+            $tmpString = "$($db.Name) last differential was $($db.LastDifferentialBackup) (UTC: $($db.LastDifferentialBackup.ToUniversalTime()))"
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+
             $LastDiff = (($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
@@ -358,6 +366,11 @@ foreach ($db in $dbs) {
             $LastFull = "Never"
         }
         else {
+            $tmpString = "$($db.Name) last full was $($db.LastFullBackup) (UTC: $($db.LastFullBackup.ToUniversalTime()))"
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+
+ 
             $LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
 
