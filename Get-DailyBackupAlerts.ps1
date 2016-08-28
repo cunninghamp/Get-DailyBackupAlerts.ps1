@@ -372,7 +372,6 @@ foreach ($db in $dbs) {
             $tmpString = "$($db.Name) last full was $($db.LastFullBackup) (UTC: $($db.LastFullBackup.ToUniversalTime()))"
             Write-Verbose $tmpString
             if ($Log) {Write-Logfile $tmpstring}
-
  
             $LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours).ToInt32($null)
         }
