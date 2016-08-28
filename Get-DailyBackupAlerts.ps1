@@ -339,7 +339,7 @@ foreach ($db in $dbs) {
             Write-Verbose $tmpString
             if ($Log) {Write-Logfile $tmpstring}
 
-            $LastInc = (($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours).ToInt32($null)
+            [int]$LastInc = (($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours)
         }
 
         #Check differential backup timestamp and calculate hours since last Diff backup
@@ -356,7 +356,7 @@ foreach ($db in $dbs) {
             Write-Verbose $tmpString
             if ($Log) {Write-Logfile $tmpstring}
 
-            $LastDiff = (($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours).ToInt32($null)
+            [int]$LastDiff = (($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours)
         }
 
         #Check full backup timestamp and calculate hours since last Full backup
@@ -373,7 +373,7 @@ foreach ($db in $dbs) {
             Write-Verbose $tmpString
             if ($Log) {Write-Logfile $tmpstring}
  
-            $LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours).ToInt32($null)
+            [int]$LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours)
         }
 
         #Values in this hashtable are calculated as hours since last backup
