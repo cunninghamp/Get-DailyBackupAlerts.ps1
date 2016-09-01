@@ -56,6 +56,7 @@ V1.07, 18/08/2016 - Added handling for differential backups
                     - General code cleanup
 V1.08, 25/08/2016 - Fixed incorrect number formatting
                     - Fixed bug with databases that haven't been backed up being reported as "Incremental"
+V1.09, 01/09/2016 - Fixed bug with Exchange 2010 servers throwing an error calculating hours since last backup
 #>
 
 #requires -version 2
