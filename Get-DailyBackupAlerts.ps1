@@ -56,6 +56,7 @@ V1.07, 18/08/2016 - Added handling for differential backups
                     - General code cleanup
 V1.08, 25/08/2016 - Fixed incorrect number formatting
                     - Fixed bug with databases that haven't been backed up being reported as "Incremental"
+V1.09, 01/09/2016 - Fixed bug with Exchange 2010 servers throwing an error calculating hours since last backup
 #>
 
 #requires -version 2
@@ -105,6 +106,9 @@ $smtpsettings = @{
     SmtpServer = $ConfigFile.Settings.EmailSettings.SMTPServer
     }
 
+if ($Log) {
+    $smtpsettings.Add("Attachments",$logfile)
+}
 
 # Modify these alert thresholds in Settings.xml
 # You can set a different alert threshold for Mondays
@@ -332,7 +336,11 @@ foreach ($db in $dbs) {
             $LastInc = "Never"
         }
         else {
-            $LastInc = (($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours).ToInt32($null)
+            $tmpString = "$($db.Name) last incremental was $($db.LastIncrementalBackup) (UTC: $($db.LastIncrementalBackup.ToUniversalTime()))"
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+
+            [int]$LastInc = (($now.ToUniversalTime() - $db.LastIncrementalBackup.ToUniversalTime()).TotalHours)
         }
 
         #Check differential backup timestamp and calculate hours since last Diff backup
@@ -345,7 +353,11 @@ foreach ($db in $dbs) {
             $LastDiff = "Never"
         }
         else {
-            $LastDiff = (($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours).ToInt32($null)
+            $tmpString = "$($db.Name) last differential was $($db.LastDifferentialBackup) (UTC: $($db.LastDifferentialBackup.ToUniversalTime()))"
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+
+            [int]$LastDiff = (($now.ToUniversalTime() - $db.LastDifferentialBackup.ToUniversalTime()).TotalHours)
         }
 
         #Check full backup timestamp and calculate hours since last Full backup
@@ -358,7 +370,11 @@ foreach ($db in $dbs) {
             $LastFull = "Never"
         }
         else {
-            $LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours).ToInt32($null)
+            $tmpString = "$($db.Name) last full was $($db.LastFullBackup) (UTC: $($db.LastFullBackup.ToUniversalTime()))"
+            Write-Verbose $tmpString
+            if ($Log) {Write-Logfile $tmpstring}
+ 
+            [int]$LastFull = (($now.ToUniversalTime() - $db.LastFullBackup.ToUniversalTime()).TotalHours)
         }
 
         #Values in this hashtable are calculated as hours since last backup
