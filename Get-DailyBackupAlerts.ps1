@@ -234,7 +234,7 @@ if ($CommandGetPFDB.Parameters.ContainsKey("IncludePreExchange2010")) {
     $pfdbs = @(Get-PublicFolderDatabase -Status -IncludePreExchange2010)
 }
 else {
-    $pfbs = @(Get-PublicFolderDatabase -Status)
+    $pfdbs = @(Get-PublicFolderDatabase -Status)
 }
 
 
