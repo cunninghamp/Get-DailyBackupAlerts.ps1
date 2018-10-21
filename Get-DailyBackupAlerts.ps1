@@ -27,9 +27,14 @@ Sends the report even if no alerts are found, and writes a log file.
 http://exchangeserverpro.com/set-automated-exchange-2010-database-backup-alert-email
 
 .NOTES
-Written By: Paul Cunningham
-Website:	http://exchangeserverpro.com
-Twitter:	http://twitter.com/exchservpro
+Written by: Paul Cunningham
+
+Find me on:
+
+* My Blog:	https://paulcunningham.me
+* Twitter:	https://twitter.com/paulcunningham
+* LinkedIn:	https://au.linkedin.com/in/cunninghamp/
+* Github:	https://github.com/cunninghamp
 
 Additional Credits:
 - Chris Brown (http://www.flamingkeys.com, http://twitter.com/chrisbrownie)
